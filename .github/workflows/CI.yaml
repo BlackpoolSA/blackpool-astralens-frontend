@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      OCI_CLI_USER: ${{ secrets.OCI_CLI_USER }}
+      OCI_CLI_TENANCY: ${{ secrets.OCI_CLI_TENANCY }}
+      OCI_CLI_FINGERPRINT: ${{ secrets.OCI_CLI_FINGERPRINT }}
+      OCI_CLI_KEY_CONTENT: ${{ secrets.OCI_CLI_KEY_CONTENT }}
+      OCI_CLI_REGION: ${{ secrets.OCI_CLI_REGION }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+      
+      - name: Get access to OCIR
+        id: get-ocir
+        uses: oracle-actions/get-ocir-repository@v1.3.0
+        with:
+          name: frontend
+          compartment: ${{ secrets.OCI_COMPARTMENT_OCID }}
+      
+      - name: Log into OCIR
+        uses: oracle-actions/login-ocir@v1.3.0
+        id: login-ocir
+        with:
+          auth_token: ${{ secrets.OCI_AUTH_TOKEN }}
+      
+      - name: docker build
+        id: docker-build
+        run: |
+          docker build -t ${{ steps.get-ocir.outputs.repo_path }}:${{ github.sha }} .
+      
+      - name: docker push
+        id: docker-push
+        run: |
+          docker push ${{ steps.get-ocir.outputs.repo_path }}:${{ github.sha }}
+      
+      - name: Repository Dispatch
+        uses: peter-evans/repository-dispatch@v1
+        with:
+          token: ${{ secrets.PAT }}
+          repository: ${{ github.actor }}/blackpool-astralens-frontend-argocd
+          event-type: new-image
+          client-payload: '{"image": "${{ steps.get-ocir.outputs.repo_path }}:${{ github.sha }}"}'
