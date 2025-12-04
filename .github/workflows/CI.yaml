@@ -43,6 +43,6 @@ jobs:
         uses: peter-evans/repository-dispatch@v1
         with:
           token: ${{ secrets.PAT }}
-          repository: ${{ github.actor }}/blackpool-astralens-frontend-argocd
+          repository: BlackpoolSA/blackpool-astralens-frontend-argocd
           event-type: new-image
           client-payload: '{"image": "${{ steps.get-ocir.outputs.repo_path }}:${{ github.sha }}"}'
